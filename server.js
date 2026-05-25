@@ -8,57 +8,75 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let users = {}; // userId -> socket.id
+let users = {};        // активные пользователи
+let messages = {};     // сообщения по каждому пользователю
 
 io.on("connection", (socket) => {
 
-  socket.on("register", (userId) => {
-    users[userId] = socket.id;
-    socket.userId = userId;
+    // пользователь заходит
+    socket.on("join", (name) => {
 
-    io.emit("users", Object.keys(users));
-  });
+        users[socket.id] = {
+            id: socket.id,
+            name: name
+        };
 
-  // 👤 пользователь
-  socket.on("user-message", (data) => {
+        if (!messages[socket.id]) {
+            messages[socket.id] = [];
+        }
 
-    if (!data.userId || !data.text) return;
-
-    io.emit("new-message", {
-      userId: data.userId,
-      name: data.name || "Гость",
-      text: data.text,
-      from: "user"
+        io.emit("users", users);
     });
-  });
 
-  // 🧑‍💼 оператор
-  socket.on("operator-message", (data) => {
+    // сообщение от пользователя
+    socket.on("visitor-message", (data) => {
 
-    if (!data.userId || !data.text) return;
+        if (!messages[socket.id]) {
+            messages[socket.id] = [];
+        }
 
-    const socketId = users[data.userId];
+        messages[socket.id].push({
+            from: "user",
+            name: data.name,
+            message: data.message,
+            time: new Date().toLocaleTimeString()
+        });
 
-    if (socketId) {
-      io.to(socketId).emit("new-message", {
-        userId: data.userId,
-        name: "ОПЕРАТОР",
-        text: data.text,
-        from: "operator"
-      });
-    }
+        io.emit("new-message", {
+            userId: socket.id,
+            ...messages[socket.id].slice(-1)[0]
+        });
+    });
 
-  });
+    // сообщение от оператора
+    socket.on("operator-message", (data) => {
 
-  socket.on("disconnect", () => {
-    if (socket.userId) {
-      delete users[socket.userId];
-      io.emit("users", Object.keys(users));
-    }
-  });
+        if (!messages[data.userId]) {
+            messages[data.userId] = [];
+        }
+
+        messages[data.userId].push({
+            from: "operator",
+            name: "Оператор",
+            message: data.message,
+            time: new Date().toLocaleTimeString()
+        });
+
+        io.to(data.userId).emit("operator-reply", {
+            name: "Оператор",
+            message: data.message,
+            time: new Date().toLocaleTimeString()
+        });
+
+    });
+
+    socket.on("disconnect", () => {
+        delete users[socket.id];
+        io.emit("users", users);
+    });
 
 });
 
 server.listen(3000, () => {
-  console.log("Server running on http://localhost:3000");
+    console.log("Server running on 3000");
 });

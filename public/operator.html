@@ -1,93 +1,190 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>Operator</title>
-  <script src="/socket.io/socket.io.js"></script>
+    <meta charset="UTF-8">
+    <title>Operator Panel</title>
+
+    <script src="/socket.io/socket.io.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial;
+            display: flex;
+            height: 100vh;
+        }
+
+        /* Список пользователей */
+        #users {
+            width: 30%;
+            border-right: 1px solid #ddd;
+            overflow-y: auto;
+        }
+
+        .user {
+            padding: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid #eee;
+        }
+
+        .user:hover {
+            background: #f5f5f5;
+        }
+
+        .active {
+            background: #e8e8ff;
+        }
+
+        /* Чат */
+        #chat {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #messages {
+            flex: 1;
+            padding: 10px;
+            overflow-y: auto;
+        }
+
+        #inputBox {
+            display: flex;
+            border-top: 1px solid #ddd;
+        }
+
+        input {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            outline: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            background: #4f46e5;
+            color: white;
+            cursor: pointer;
+        }
+
+        .msg-user {
+            text-align: right;
+            margin: 5px;
+            color: black;
+        }
+
+        .msg-operator {
+            text-align: left;
+            margin: 5px;
+            color: #4f46e5;
+        }
+    </style>
 </head>
+
 <body>
 
-<h2>ОПЕРАТОР</h2>
+<div id="users"></div>
 
-<div style="display:flex;">
+<div id="chat">
+    <div id="messages"></div>
 
-  <div id="users" style="width:200px;border-right:1px solid #ccc;"></div>
-
-  <div style="flex:1;padding:10px;">
-
-    <div id="chat"></div>
-
-    <input id="msg" placeholder="Ответ">
-    <button id="send">Отправить</button>
-
-  </div>
-
+    <div id="inputBox">
+        <input id="text" placeholder="Сообщение...">
+        <button onclick="send()">Send</button>
+    </div>
 </div>
 
 <script>
-
 const socket = io();
 
 let selectedUser = null;
+let allUsers = {};
+let allMessages = {};
 
-const usersDiv = document.getElementById("users");
-const chat = document.getElementById("chat");
-const msg = document.getElementById("msg");
+socket.emit("join", "Operator");
 
+// получаем пользователей
 socket.on("users", (users) => {
-
-  usersDiv.innerHTML = "";
-
-  users.forEach(u => {
-
-    const div = document.createElement("div");
-    div.style.padding = "5px";
-    div.style.cursor = "pointer";
-    div.innerText = "User: " + u;
-
-    div.onclick = () => {
-      selectedUser = u;
-      chat.innerHTML = "";
-      alert("Выбран: " + u);
-    };
-
-    usersDiv.appendChild(div);
-  });
-
+    allUsers = users;
+    renderUsers();
 });
 
+// новые сообщения
 socket.on("new-message", (data) => {
+    if (!allMessages[data.userId]) {
+        allMessages[data.userId] = [];
+    }
 
-  const div = document.createElement("div");
-  div.style.margin = "5px 0";
+    allMessages[data.userId].push(data);
 
-  if (data.from === "operator") {
-    div.innerHTML = "🧑‍💼 ОПЕРАТОР: " + data.text;
-  } else {
-    div.innerHTML = "👤 " + data.name + ": " + data.text;
-  }
-
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
+    if (selectedUser === data.userId) {
+        renderMessages();
+    }
 });
 
-document.getElementById("send").onclick = () => {
+// список пользователей
+function renderUsers() {
+    const box = document.getElementById("users");
+    box.innerHTML = "";
 
-  if (!selectedUser) {
-    alert("Выбери пользователя");
-    return;
-  }
+    Object.values(allUsers).forEach(u => {
 
-  if (!msg.value) return;
+        const div = document.createElement("div");
+        div.className = "user";
 
-  socket.emit("operator-message", {
-    userId: selectedUser,
-    text: msg.value
-  });
+        if (selectedUser === u.id) {
+            div.classList.add("active");
+        }
 
-  msg.value = "";
-};
+        div.innerText = u.name;
 
+        div.onclick = () => {
+            selectedUser = u.id;
+            renderUsers();
+            renderMessages();
+        };
+
+        box.appendChild(div);
+    });
+}
+
+// сообщения
+function renderMessages() {
+    const box = document.getElementById("messages");
+    box.innerHTML = "";
+
+    if (!selectedUser) return;
+
+    (allMessages[selectedUser] || []).forEach(m => {
+
+        const div = document.createElement("div");
+
+        if (m.from === "operator") {
+            div.className = "msg-operator";
+            div.innerText = "Оператор: " + m.message;
+        } else {
+            div.className = "msg-user";
+            div.innerText = m.name + ": " + m.message;
+        }
+
+        box.appendChild(div);
+    });
+}
+
+// отправка
+function send() {
+    const text = document.getElementById("text");
+
+    if (!selectedUser) return;
+
+    socket.emit("operator-message", {
+        userId: selectedUser,
+        message: text.value
+    });
+
+    text.value = "";
+}
 </script>
 
 </body>
