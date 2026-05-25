@@ -52,8 +52,6 @@
 
     sendBtn.onclick = () => {
 
-        if (!textInput.value) return;
-
         socket.emit("visitor-message", {
             name: nameInput.value || "Guest",
             message: textInput.value
@@ -63,21 +61,17 @@
     };
 
     socket.on("own-message", (msg) => {
-
         const div = document.createElement("div");
         div.style.textAlign = "right";
         div.innerHTML = `<b>Я:</b> ${msg.message}`;
-
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
     });
 
     socket.on("operator-reply", (msg) => {
-
         const div = document.createElement("div");
         div.style.textAlign = "left";
         div.innerHTML = `<b>Оператор:</b> ${msg.message}`;
-
         messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
     });

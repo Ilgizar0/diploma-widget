@@ -13,7 +13,7 @@ let messages = {};
 
 io.on("connection", (socket) => {
 
-    // регистрация пользователя
+    // пользователь заходит
     socket.on("join", (name) => {
 
         users[socket.id] = {
@@ -36,17 +36,21 @@ io.on("connection", (socket) => {
         const msg = {
             userId: socket.id,
             from: "user",
-            name: user ? user.name : (data.name || "Guest"),
+            name: user?.name || data.name || "Guest",
             message: data.message
         };
 
         if (!messages[socket.id]) messages[socket.id] = [];
         messages[socket.id].push(msg);
 
+        // ВАЖНО: отправляем ВСЕМ операторам
         io.emit("new-message", msg);
+
+        // и обратно клиенту
+        socket.emit("own-message", msg);
     });
 
-    // оператор отвечает
+    // сообщение оператора
     socket.on("operator-message", (data) => {
 
         const msg = {
@@ -69,4 +73,6 @@ io.on("connection", (socket) => {
 
 });
 
-server.listen(process.env.PORT || 3000);
+server.listen(process.env.PORT || 3000, () => {
+    console.log("server running");
+});
