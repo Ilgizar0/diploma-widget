@@ -8,19 +8,19 @@ const io = new Server(server);
 
 app.use(express.static("public"));
 
-let users = {};       // активные пользователи
-let messages = {};    // история диалогов по userId
+let users = {};
+let messages = {};
 
 io.on("connection", (socket) => {
 
     console.log("connected:", socket.id);
 
-    // пользователь подключается
+    // вход пользователя
     socket.on("join", (name) => {
 
         users[socket.id] = {
             id: socket.id,
-            name
+            name: name || "Guest"
         };
 
         if (!messages[socket.id]) {
@@ -30,32 +30,33 @@ io.on("connection", (socket) => {
         io.emit("users", users);
     });
 
-    // сообщение от клиента
+    // сообщение клиента
     socket.on("visitor-message", (data) => {
 
         const msg = {
             userId: socket.id,
             from: "user",
-            name: data.name || "Guest",
-            message: data.message,
-            time: Date.now()
+            name: users[socket.id]?.name || data.name || "Guest",
+            message: data.message
         };
 
         if (!messages[socket.id]) messages[socket.id] = [];
         messages[socket.id].push(msg);
 
         io.emit("new-message", msg);
+
+        // показать самому пользователю
+        socket.emit("own-message", msg);
     });
 
-    // сообщение от оператора
+    // сообщение оператора
     socket.on("operator-message", (data) => {
 
         const msg = {
             userId: data.userId,
             from: "operator",
             name: "Оператор",
-            message: data.message,
-            time: Date.now()
+            message: data.message
         };
 
         if (!messages[data.userId]) messages[data.userId] = [];
@@ -65,10 +66,8 @@ io.on("connection", (socket) => {
     });
 
     socket.on("disconnect", () => {
-
         delete users[socket.id];
         io.emit("users", users);
-
     });
 
 });

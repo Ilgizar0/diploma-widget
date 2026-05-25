@@ -8,10 +8,8 @@
 
 <body style="margin:0;display:flex;height:100vh;font-family:Arial;">
 
-<!-- USERS -->
 <div id="users" style="width:30%;border-right:1px solid #ccc;"></div>
 
-<!-- CHAT -->
 <div style="flex:1;display:flex;flex-direction:column;">
 
     <div id="messages" style="flex:1;overflow:auto;padding:10px;"></div>
@@ -32,13 +30,11 @@ let messages = {};
 
 socket.emit("join", "Operator");
 
-// users list
 socket.on("users", (data) => {
     users = data;
     renderUsers();
 });
 
-// messages
 socket.on("new-message", (msg) => {
 
     if (!messages[msg.userId]) {
@@ -60,7 +56,8 @@ function renderUsers() {
     Object.values(users).forEach(u => {
 
         const div = document.createElement("div");
-        div.innerText = u.name;
+
+        div.innerText = u.name + " (" + u.id.slice(0,5) + ")";
         div.style.padding = "10px";
         div.style.cursor = "pointer";
 

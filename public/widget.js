@@ -4,69 +4,81 @@
 
     let opened = false;
 
-    socket.emit("join", "Guest");
+    socket.emit("join", "");
 
-    const ui = document.createElement("div");
+    const root = document.createElement("div");
 
-    ui.innerHTML = `
-    <div id="chatBox" style="
-        position:fixed;
-        bottom:20px;
-        right:20px;
-        width:280px;
-        height:360px;
-        background:#fff;
-        border:1px solid #ccc;
-        display:none;
-        flex-direction:column;
-        font-family:Arial;
-    ">
-        <div id="messages" style="flex:1;overflow:auto;padding:10px;"></div>
+    root.innerHTML = `
+        <div id="chat" style="
+            position:fixed;
+            bottom:20px;
+            right:20px;
+            width:280px;
+            height:360px;
+            background:#fff;
+            border:1px solid #ccc;
+            display:none;
+            flex-direction:column;
+            font-family:Arial;
+        ">
+            <div id="messages" style="flex:1;overflow:auto;padding:10px;"></div>
 
-        <input id="name" placeholder="Имя" style="padding:5px;">
-        <input id="text" placeholder="Сообщение" style="padding:5px;">
-        <button id="send">Отправить</button>
-    </div>
+            <input id="name" placeholder="Ваше имя" style="padding:5px;">
+            <input id="text" placeholder="Сообщение" style="padding:5px;">
+            <button id="send">Отправить</button>
+        </div>
 
-    <button id="openBtn" style="
-        position:fixed;
-        bottom:20px;
-        right:20px;
-        padding:10px;
-    ">Chat</button>
+        <button id="openBtn" style="
+            position:fixed;
+            bottom:20px;
+            right:20px;
+            padding:10px;
+        ">Chat</button>
     `;
 
-    document.body.appendChild(ui);
+    document.body.appendChild(root);
 
-    const chatBox = ui.querySelector("#chatBox");
-    const openBtn = ui.querySelector("#openBtn");
-    const sendBtn = ui.querySelector("#send");
-    const text = ui.querySelector("#text");
-    const name = ui.querySelector("#name");
-    const messages = ui.querySelector("#messages");
+    const chat = root.querySelector("#chat");
+    const openBtn = root.querySelector("#openBtn");
+    const sendBtn = root.querySelector("#send");
+    const nameInput = root.querySelector("#name");
+    const textInput = root.querySelector("#text");
+    const messages = root.querySelector("#messages");
 
     openBtn.onclick = () => {
         opened = !opened;
-        chatBox.style.display = opened ? "flex" : "none";
+        chat.style.display = opened ? "flex" : "none";
     };
 
     sendBtn.onclick = () => {
 
+        if (!textInput.value) return;
+
         socket.emit("visitor-message", {
-            name: name.value || "Guest",
-            message: text.value
+            name: nameInput.value || "Guest",
+            message: textInput.value
         });
 
-        text.value = "";
+        textInput.value = "";
     };
+
+    socket.on("own-message", (msg) => {
+
+        const div = document.createElement("div");
+        div.style.textAlign = "right";
+        div.innerHTML = `<b>Я:</b> ${msg.message}`;
+
+        messages.appendChild(div);
+        messages.scrollTop = messages.scrollHeight;
+    });
 
     socket.on("operator-reply", (msg) => {
 
         const div = document.createElement("div");
-        div.style.margin = "5px";
+        div.style.textAlign = "left";
         div.innerHTML = `<b>Оператор:</b> ${msg.message}`;
-        messages.appendChild(div);
 
+        messages.appendChild(div);
         messages.scrollTop = messages.scrollHeight;
     });
 
