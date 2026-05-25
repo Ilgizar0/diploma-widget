@@ -13,9 +13,7 @@ let messages = {};
 
 io.on("connection", (socket) => {
 
-    console.log("connected:", socket.id);
-
-    // вход пользователя
+    // регистрация пользователя
     socket.on("join", (name) => {
 
         users[socket.id] = {
@@ -33,10 +31,12 @@ io.on("connection", (socket) => {
     // сообщение клиента
     socket.on("visitor-message", (data) => {
 
+        const user = users[socket.id];
+
         const msg = {
             userId: socket.id,
             from: "user",
-            name: users[socket.id]?.name || data.name || "Guest",
+            name: user ? user.name : (data.name || "Guest"),
             message: data.message
         };
 
@@ -44,12 +44,9 @@ io.on("connection", (socket) => {
         messages[socket.id].push(msg);
 
         io.emit("new-message", msg);
-
-        // показать самому пользователю
-        socket.emit("own-message", msg);
     });
 
-    // сообщение оператора
+    // оператор отвечает
     socket.on("operator-message", (data) => {
 
         const msg = {
@@ -72,8 +69,4 @@ io.on("connection", (socket) => {
 
 });
 
-const PORT = process.env.PORT || 3000;
-
-server.listen(PORT, () => {
-    console.log("Server running on", PORT);
-});
+server.listen(process.env.PORT || 3000);
